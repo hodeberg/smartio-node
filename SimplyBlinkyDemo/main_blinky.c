@@ -166,6 +166,8 @@ static QueueHandle_t xQueue = NULL;
 
 /*-----------------------------------------------------------*/
 
+extern void initUART(void);
+
 void main_blinky( void )
 {
 	/* See http://www.FreeRTOS.org/TI_MSP432_Free_RTOS_Demo.html for 
@@ -177,6 +179,7 @@ void main_blinky( void )
 	/* The full demo configures the clocks for maximum frequency, wheras this
 	blinky demo uses a slower clock as it also uses low power features. */
 	prvConfigureClocks();
+	CS_setDCOCenteredFrequency(CS_DCO_FREQUENCY_12);
 
 	/* Create the queue. */
 	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
@@ -243,6 +246,7 @@ static const TickType_t xShortBlock = pdMS_TO_TICKS( 50 );
 	/* Check the task parameter is as expected. */
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_RECEIVE_PARAMETER );
 
+	initUART();
 	for( ;; )
 	{
 		/* Wait until something arrives in the queue - this task will block

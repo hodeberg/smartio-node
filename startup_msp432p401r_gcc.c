@@ -68,6 +68,7 @@ demo application. */
 extern void vUART_Handler( void );
 extern void vT32_0_Handler( void );
 extern void vT32_1_Handler( void );
+extern void euscia2_isr(void);
 
 extern unsigned long __stack_end__;
 
@@ -115,7 +116,7 @@ void (* const interruptVectors[])(void) __attribute__ ((section (".intvecs"))) =
     defaultISR,                             /* TA3_N ISR                 */
 	vUART_Handler,                             /* EUSCIA0 ISR               */
     defaultISR,                             /* EUSCIA1 ISR               */
-    defaultISR,                             /* EUSCIA2 ISR               */
+	euscia2_isr,                             /* EUSCIA2 ISR               */
     defaultISR,                             /* EUSCIA3 ISR               */
     defaultISR,                             /* EUSCIB0 ISR               */
     defaultISR,                             /* EUSCIB1 ISR               */

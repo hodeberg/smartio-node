@@ -68,7 +68,8 @@
 //     <12000000> 12 MHz
 //     <24000000> 24 MHz
 //     <48000000> 48 MHz
-#define  __SYSTEM_CLOCK    3000000
+//#define  __SYSTEM_CLOCK    3000000
+#define  __SYSTEM_CLOCK    1500000
 
 /*--------------------- Power Regulator Configuration -----------------------*/
 //  Power Regulator Mode
@@ -396,10 +397,16 @@ void SystemInit(void)
     #endif
 
 }
-
+#if 0
 int _exit(int code)
 {
 	for(;;);
 	return 1;
 }
+#else
+void _exit(int code)
+{
+	for(;;);
+}
 
+#endif
