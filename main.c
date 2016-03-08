@@ -119,7 +119,6 @@ int main( void )
 	
 	/* Prepare the hardware to run this demo. */
 	prvSetupHardware();
-	printf("Entering main\n");
 
 	/* The configCREATE_SIMPLE_TICKLESS_DEMO setting is described at the top
 	of this file. */

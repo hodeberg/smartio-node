@@ -56,16 +56,33 @@
  *            |                 |
  *
  * Author: Timothy Logan
+ *
+ *
+ * The serial protocol is:
+ * <STX><SIZE><SEQ_ID><TYPE><DATA><CRC><ETX>
+ * Any X in [<STX>, <ESC>, <ETX>] between <STX>/<ETX> is escaped by <ESC><X>
+ * Size is one byte.
+ * SEQ_ID is a message identifier. ACK/NAK messages echo this.
+ * TYPE is ACK, NAK or MSG
+ * DATA is the payload.
+ *
+ * When an entire STX/ETX stream has been received, it is briefly analyzed.
+ * If the CRC does not match:
+ *   If ACK/NAK: just discard
+ *   If MSG: send NAK
+ * If upper layers have no room for message: Send NAK
+ * Otherwise, send ACK.
+ * CRC is a CRC-16, MSB first. x^15 + x^12 + x^5 + 1
 *******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
 
 /* Standard Includes */
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+//#include <stdio.h>
 #include <string.h>
 
-#include <stdbool.h>
+//#include <stdbool.h>
 
 /* UART Configuration Parameter. These are the configuration parameters to
  * make the eUSCI A UART module to operate with a 9600 baud rate. These
@@ -84,6 +101,10 @@ const eUSCI_UART_Config uartConfig =
         EUSCI_A_UART_ONE_STOP_BIT,               // One stop bit
         EUSCI_A_UART_MODE,                       // UART mode
         EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION  // Oversampling
+};
+
+extern "C" {
+void initUART(void);
 };
 
 void initUART(void)
@@ -107,18 +128,6 @@ void initUART(void)
     MAP_UART_enableInterrupt(EUSCI_A2_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT | EUSCI_A_UART_TRANSMIT_INTERRUPT);
     MAP_UART_clearInterruptFlag(EUSCI_A2_BASE, MAP_UART_getEnabledInterruptStatus(EUSCI_A2_BASE));
     MAP_Interrupt_enableInterrupt(INT_EUSCIA2);
-
-#if 0
-    MAP_Interrupt_enableSleepOnIsrExit();
-    MAP_Interrupt_enableMaster();   
-#endif
-
-#if 0
-    while(1)
-    {
-        MAP_PCM_gotoLPM0();
-    }
-#endif
 }
 
 
@@ -154,6 +163,10 @@ int getRxData(uint8_t * const c)
 	*c = outbuf[out_rd_ix++];
 	return 1;
 }
+
+extern "C" {
+void euscia2_isr(void);
+};
 
 /* EUSCI A2 UART ISR - Echoes data back to PC host */
 void euscia2_isr(void)

@@ -238,6 +238,8 @@ const unsigned long ulValueToSend = 100UL;
 }
 /*-----------------------------------------------------------*/
 
+void TestRingBuffer();
+
 static void prvQueueReceiveTask( void *pvParameters )
 {
 unsigned long ulReceivedValue;
@@ -247,6 +249,7 @@ static const TickType_t xShortBlock = pdMS_TO_TICKS( 50 );
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_RECEIVE_PARAMETER );
 
 	initUART();
+
 	for( ;; )
 	{
 		/* Wait until something arrives in the queue - this task will block
