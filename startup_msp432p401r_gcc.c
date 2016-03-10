@@ -200,12 +200,15 @@ void software_init_hook(void)
 typedef void (*func_ptr)(void);
 extern func_ptr __init_array_start[0], __init_array_end[0];
 
+
+
 void resetISR(void)
 {
     /* Copy the data segment initializers from flash to SRAM. */
     uint32_t *pui32Src, *pui32Dest;
+#ifdef NOSTARTUPFILES
     func_ptr* func;
-
+#endif
     /* Call system initialization routine */
 	SystemInit();
 
@@ -227,13 +230,18 @@ void resetISR(void)
           "    strlt   r2, [r0], #4\n"
           "    blt     zero_loop");
 
+#ifdef NOSTARTUPFILES
     /* Run constructors. */
    for (func = __init_array_start; func != __init_array_end; func++)
 	   (*func)();
 
 
     /* Call the application's entry point. */
+
     main();
+#else
+    _start();
+#endif
 }
 
 

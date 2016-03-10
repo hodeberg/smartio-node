@@ -214,6 +214,7 @@ static void prvQueueSendTask( void *pvParameters )
 {
 TickType_t xNextWakeTime;
 const unsigned long ulValueToSend = 100UL;
+int i = 0;
 
 	/* Check the task parameter is as expected. */
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_SEND_PARAMETER );
@@ -223,6 +224,7 @@ const unsigned long ulValueToSend = 100UL;
 
 	for( ;; )
 	{
+
 		/* Place this task in the blocked state until it is time to run again.
 		The block time is specified in ticks, the constant used converts ticks
 		to ms.  While in the Blocked state this task will not consume any CPU

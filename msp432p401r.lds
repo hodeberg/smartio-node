@@ -83,10 +83,11 @@ SECTIONS {
         KEEP (*(.preinit_array*))
         __preinit_array_end = .;
         . = ALIGN(0x4);
-        __init_array_start = .;
-        KEEP (*(.init_array*))
-        __init_array_end = .;
-        *(.init)
+        PROVIDE_HIDDEN(__init_array_start = .);
+        KEEP (*(SORT(.init_array*)))
+        KEEP (*(.init_array))
+        PROVIDE_HIDDEN(__init_array_end = .);
+        KEEP(*(.init))
         *(.fini*)
     } > REGION_TEXT AT> REGION_TEXT
 
@@ -131,6 +132,7 @@ SECTIONS {
         end = __heap_start__;
         _end = end;
         __end = end;
+        __end__ = end;
         KEEP (*(.heap))
         __heap_end__ = .;
         __HeapLimit = __heap_end__;
