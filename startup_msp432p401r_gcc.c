@@ -43,6 +43,7 @@ static void resetISR(void);
 static void nmiISR(void);
 static void faultISR(void);
 static void defaultISR(void);
+extern void _start(void);
 
 #ifndef HWREG
 #define HWREG(x) (*((volatile uint32_t *)(x)))
@@ -83,7 +84,7 @@ void (* const interruptVectors[])(void) __attribute__ ((section (".intvecs"))) =
 	(void (*)(void))(&__stack_end__),
 #endif
                                             /* The initial stack pointer */
-    resetISR,                               /* The reset handler         */
+	resetISR,                               /* The reset handler         */
     nmiISR,                                 /* The NMI handler           */
     faultISR,                               /* The hard fault handler    */
     defaultISR,                             /* The MPU fault handler     */
@@ -176,15 +177,40 @@ extern uint32_t __data_end__;
 extern uint32_t __bss_start__;
 extern uint32_t __bss_end__;
 
+#if 0
+void hardware_init_hook(void)
+{
+	SystemInit();
+}
+
+void software_init_hook(void)
+{
+	/* Copy the data segment initializers from flash to SRAM. */
+    uint32_t *pui32Src, *pui32Dest;
+
+    pui32Src = &__data_load__;
+    for(pui32Dest = &__data_start__; pui32Dest < &__data_end__; )
+    {
+        *pui32Dest++ = *pui32Src++;
+    }
+}
+
+#endif
+
+typedef void (*func_ptr)(void);
+extern func_ptr __init_array_start[0], __init_array_end[0];
+
 void resetISR(void)
 {
     /* Copy the data segment initializers from flash to SRAM. */
     uint32_t *pui32Src, *pui32Dest;
+    func_ptr* func;
 
     /* Call system initialization routine */
 	SystemInit();
 
-    pui32Src = &__data_load__;
+	/* Initialize static variables.	 */
+	pui32Src = &__data_load__;
     for(pui32Dest = &__data_start__; pui32Dest < &__data_end__; )
     {
         *pui32Dest++ = *pui32Src++;
@@ -200,6 +226,11 @@ void resetISR(void)
           "    it      lt\n"
           "    strlt   r2, [r0], #4\n"
           "    blt     zero_loop");
+
+    /* Run constructors. */
+   for (func = __init_array_start; func != __init_array_end; func++)
+	   (*func)();
+
 
     /* Call the application's entry point. */
     main();

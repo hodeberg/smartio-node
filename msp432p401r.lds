@@ -79,6 +79,10 @@ SECTIONS {
         . = ALIGN(0x4);
         KEEP (*(.dtors))
         . = ALIGN(0x4);
+        __preinit_array_start = .;
+        KEEP (*(.preinit_array*))
+        __preinit_array_end = .;
+        . = ALIGN(0x4);
         __init_array_start = .;
         KEEP (*(.init_array*))
         __init_array_end = .;
@@ -133,10 +137,10 @@ SECTIONS {
     } > REGION_HEAP AT> REGION_HEAP
 
     .stack (NOLOAD) : ALIGN(0x8) {
-        _stack = .;
-        __stack = .;
         KEEP(*(.stack))
         . = . + __stack_size__;
+        _stack = .;
+        __stack = .;
         __stack_end__ = .;
     } > REGION_STACK AT> REGION_STACK
 }

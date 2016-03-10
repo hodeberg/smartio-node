@@ -76,6 +76,7 @@
 *******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
+#include "LinearBuffer.h"
 
 /* Standard Includes */
 #include <cstdint>
@@ -167,6 +168,11 @@ int getRxData(uint8_t * const c)
 extern "C" {
 void euscia2_isr(void);
 };
+
+const int UART_RX_BUF_SIZE = 32;
+uint8_t rxbuf1[UART_RX_BUF_SIZE];
+LinearBuffer rxLinearBuf1(rxbuf1, UART_RX_BUF_SIZE);
+
 
 /* EUSCI A2 UART ISR - Echoes data back to PC host */
 void euscia2_isr(void)
