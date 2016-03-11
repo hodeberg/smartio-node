@@ -68,6 +68,7 @@ SECTIONS {
 
     .vtable (_vtable_base_address) : AT (_vtable_base_address) {
         KEEP (*(.vtable))
+        KEEP (*(vtable))
     } > REGION_DATA
 
     .text : {
@@ -78,6 +79,8 @@ SECTIONS {
         KEEP (*(.ctors))
         . = ALIGN(0x4);
         KEEP (*(.dtors))
+        . = ALIGN(0x4);
+        KEEP(*(.eh_frame*))
         . = ALIGN(0x4);
         __preinit_array_start = .;
         KEEP (*(.preinit_array*))

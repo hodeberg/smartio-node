@@ -76,7 +76,7 @@
 *******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
-#include "LinearBuffer.h"
+#include "UartRxBuffer.h"
 
 /* Standard Includes */
 #include <cstdint>
@@ -169,10 +169,7 @@ extern "C" {
 void euscia2_isr(void);
 };
 
-const int UART_RX_BUF_SIZE = 32;
-uint8_t rxbuf1[UART_RX_BUF_SIZE];
-LinearBuffer rxLinearBuf1(rxbuf1, UART_RX_BUF_SIZE);
-
+UartRxBuffer rxBuf;
 
 /* EUSCI A2 UART ISR - Echoes data back to PC host */
 void euscia2_isr(void)
@@ -185,7 +182,7 @@ void euscia2_isr(void)
     {
     	const uint8_t c = MAP_UART_receiveData(EUSCI_A2_BASE);
 
-    	putRxData(c);
+    	rxBuf.put(c);
     }
     else if (status & EUSCI_A_UART_TRANSMIT_INTERRUPT) {
     	uint8_t c;

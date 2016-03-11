@@ -9,11 +9,13 @@
 #define LINEARBUFFER_H_
 
 #include <cstdint>
+#include "BufWriteIf.h"
 
-class LinearBuffer {
+
+class LinearBuffer : public BufWriteIf {
 public:
 	LinearBuffer(unsigned char *buf, unsigned int size);
-	bool put(unsigned int c); // Returns false if full.
+	virtual bool put(unsigned int c); // Returns false if full.
 	int get(); // Returns -1 if empty
 	bool isEmpty() const { return wrIx == rdIx; }
 	bool isFull() const;
