@@ -201,6 +201,43 @@ void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
 }
 /*-----------------------------------------------------------*/
 
+// Idle task buffers
+StaticTask_t xIdleTaskBuffer;
+StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
+                                    StackType_t **ppxIdleTaskStackBuffer,
+                                    uint16_t *pusIdleTaskStackSize )
+{
+    /* Setting this parameter to NULL will result in the Idle task's TCB being
+    allocated dynamically. */
+    *ppxIdleTaskTCBBuffer = &xIdleTaskBuffer;
+
+    /* Setting this parameter to NULL will result in the Idle task's stack being
+    allocated dynamically. */
+    *ppxIdleTaskStackBuffer = &xIdleStack;
+
+    /* The size of the stack to allocate - in words, NOT in bytes! */
+    *pusIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
+static StaticTask_t xDaemonTCB;
+static StackType_t uxDaemonTaskStack[ 200 ];
+
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
+                                     StackType_t **ppxIdleTaskStackBuffer,
+                                     uint16_t *pusIdleTaskStackSize )
+{
+    /* The daemon task's TCB will be stored in the xDaemonTCB variable . */
+    *ppxIdleTaskTCBBuffer = &xDaemonTCB;
+
+    /* The daemon task will use the uxDaemonTaskStack array as its stack. */
+    *ppxIdleTaskStackBuffer = uxDaemonTaskStack;
+
+    /* The size of the uxDaemonTaskStack array - in words, NOT in bytes! */
+    *pusIdleTaskStackSize = 200;
+}
+
 void *malloc( size_t xSize )
 {
 	/* There should not be a heap defined, so trap any attempts to call

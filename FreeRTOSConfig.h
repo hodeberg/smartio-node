@@ -86,6 +86,7 @@ in main.c. */
 #define configTOTAL_HEAP_SIZE					( ( size_t ) ( 50 * 1024 ) )
 
 /* Constants that build features in or out. */
+#define configSUPPORT_STATIC_ALLOCATION 1
 #define configUSE_MUTEXES						1
 #define configUSE_TICKLESS_IDLE					1
 #define configUSE_APPLICATION_TASK_TAG			0
