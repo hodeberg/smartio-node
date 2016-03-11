@@ -171,6 +171,9 @@ extern void initUART(void);
 StaticTask_t xTxTaskBuffer;
 StaticTask_t xRxTaskBuffer;
 
+StaticQueue_t xRxQueueDef;
+uint8_t xRxQueueBuf[mainQUEUE_LENGTH * sizeof(uint32_t)];
+
  // Buffer that the task being created will use as its stack.
  StackType_t xRxStack[configMINIMAL_STACK_SIZE];
  StackType_t xTxStack[configMINIMAL_STACK_SIZE];
@@ -189,7 +192,7 @@ void main_blinky( void )
 	CS_setDCOCenteredFrequency(CS_DCO_FREQUENCY_12);
 
 	/* Create the queue. */
-	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
+	xQueue = xQueueCreateStatic( mainQUEUE_LENGTH, sizeof( uint32_t ), xRxQueueBuf, &xRxQueueDef);
 
 	if( xQueue != NULL )
 	{
