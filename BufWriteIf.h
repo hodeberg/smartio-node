@@ -11,7 +11,8 @@
 class BufWriteIf {
 public:
 	virtual bool put(unsigned int c) = 0; // Returns false if full.
-	virtual void reset();
+	virtual bool isEmpty() const = 0;
+	virtual void reset() = 0;
 };
 
 

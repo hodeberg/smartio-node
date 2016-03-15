@@ -16,20 +16,18 @@ public:
 	void put(unsigned int c);
 	enum class RxState { IDLE, HUNTING, RCV, ESCAPING, DONE };
 private:
+	void flipBuffer();
 	static const int bufsize = 32;
 	static const int STX = 2;
 	static const int ETX = 3;
 	static const int ESC = 27;
 	uint8_t buf1[bufsize];
 	uint8_t buf2[bufsize];
-#if 0
 	LinearBuffer lBuf[2];
-#else
-	LinearBuffer lBuf1;
-	LinearBuffer lBuf2;
-#endif
 	RxState state;
 	BufWriteIf *curWriteBuf;
+	uint16_t receivedBuffers;
+	uint16_t droppedBuffers;
 };
 
 #endif /* UARTRXBUFFER_H_ */

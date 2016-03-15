@@ -59,11 +59,12 @@
  *
  *
  * The serial protocol is:
- * <STX><SIZE><SEQ_ID><TYPE><DATA><CRC><ETX>
+ * <STX><SIZE><SEQ_ID><TYPE><CRC_TYPE><CRC><DATA><ETX>
  * Any X in [<STX>, <ESC>, <ETX>] between <STX>/<ETX> is escaped by <ESC><X>
  * Size is one byte.
  * SEQ_ID is a message identifier. ACK/NAK messages echo this.
  * TYPE is ACK, NAK or MSG
+ * CRC_TYPE is NONE, CRC-16
  * DATA is the payload.
  *
  * When an entire STX/ETX stream has been received, it is briefly analyzed.
@@ -72,11 +73,13 @@
  *   If MSG: send NAK
  * If upper layers have no room for message: Send NAK
  * Otherwise, send ACK.
- * CRC is a CRC-16, MSB first. x^15 + x^12 + x^5 + 1
+ * CRC-16 is MSB first. x^15 + x^12 + x^5 + 1
+ * CRC NONE means there will be no CRC field at all.
 *******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
 #include "UartRxBuffer.h"
+#include "FreeRTOSConfig.h"
 
 /* Standard Includes */
 #include <cstdint>
@@ -104,11 +107,8 @@ const eUSCI_UART_Config uartConfig =
         EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION  // Oversampling
 };
 
-extern "C" {
-void initUART(void);
-};
 
-void initUART(void)
+void initUART()
 {
     /* Selecting P1.2 and P1.3 in UART mode */
     // I/O direction is N/A, handled by peripheral.
@@ -128,6 +128,7 @@ void initUART(void)
     /* Enabling interrupts */
     MAP_UART_enableInterrupt(EUSCI_A2_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT | EUSCI_A_UART_TRANSMIT_INTERRUPT);
     MAP_UART_clearInterruptFlag(EUSCI_A2_BASE, MAP_UART_getEnabledInterruptStatus(EUSCI_A2_BASE));
+    MAP_Interrupt_setPriority(INT_EUSCIA2,  configMAX_SYSCALL_INTERRUPT_PRIORITY);
     MAP_Interrupt_enableInterrupt(INT_EUSCIA2);
 }
 
@@ -193,4 +194,5 @@ void euscia2_isr(void)
     	}
     }
 }
+
 

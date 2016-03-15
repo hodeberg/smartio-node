@@ -10,14 +10,15 @@
 
 #include <cstdint>
 #include "BufWriteIf.h"
+#include "BufReadIf.h"
 
 
-class LinearBuffer : public BufWriteIf {
+class LinearBuffer : public BufWriteIf, public BufReadIf {
 public:
 	LinearBuffer(unsigned char *buf, unsigned int size);
 	virtual bool put(unsigned int c); // Returns false if full.
-	int get(); // Returns -1 if empty
-	bool isEmpty() const { return wrIx == rdIx; }
+	virtual int get(); // Returns -1 if empty
+	virtual bool isEmpty() const { return wrIx == rdIx; }
 	bool isFull() const;
 	unsigned int bytes_stored() const; // Number of chars available for reading
 	unsigned int bytes_free() const; // Number of bytes left in buffer

@@ -6,9 +6,11 @@
  */
 
 #include "UartRxBuffer.h"
+#include "TransportMessages.h"
 
-#if 0
-UartRxBuffer::UartRxBuffer() : lBuf{{buf1, bufsize}, {buf2, bufsize}}, state(RxState::IDLE), curWriteBuf(&lBuf[0]) {}
+#if 1
+UartRxBuffer::UartRxBuffer() : lBuf{{buf1, bufsize}, {buf2, bufsize}}, state(RxState::IDLE), curWriteBuf(&lBuf[0]),
+                               receivedBuffers(0), droppedBuffers(0) {}
 #else
 UartRxBuffer::UartRxBuffer() : lBuf1{buf1, bufsize}, lBuf2{buf2, bufsize}, state(RxState::IDLE), curWriteBuf(&lBuf1) {}
 #endif
@@ -21,21 +23,28 @@ void UartRxBuffer::put(unsigned int c)
 	case RxState::DONE:
 		if (c == STX) {
 			state = RxState::RCV;
-			curWriteBuf->put(c);
+			// We don't write the STX into the buffer.
 		}
 		break;
 	case RxState::RCV:
 		if (c == ESC)
 			state = RxState::ESCAPING;
-		else {
-			if (curWriteBuf->put(c)) {
-				if (c == ETX) {
-					state = RxState::DONE;
-					// TBD: switch to other buffer, notify upper layer.
-				}
+		else if (c == ETX) {
+			RxMsgBase msg{static_cast<LinearBuffer*>(curWriteBuf)};
+			state = RxState::DONE;
+			if (TransportLayer::sendMsgFromIrq(msg)) {
+				flipBuffer();
+				receivedBuffers++;
 			}
 			else {
+				droppedBuffers++;
+				curWriteBuf->reset();
+			}
+		}
+		else {
+			if (!curWriteBuf->put(c)) {
 				// Full buffer
+				droppedBuffers++;
 				curWriteBuf->reset();
 				state = RxState::HUNTING;
 			}
@@ -47,12 +56,14 @@ void UartRxBuffer::put(unsigned int c)
 				state = RxState::RCV;
 				if (!curWriteBuf->put(c)) {
 					curWriteBuf->reset();
+					droppedBuffers++;
 					state = RxState::HUNTING;
 				}
 			}
 			else {
 				// Illegally escaped char.
 				curWriteBuf->reset();
+				droppedBuffers++;
 				state = RxState::HUNTING;
 			}
 		}
@@ -61,4 +72,10 @@ void UartRxBuffer::put(unsigned int c)
 }
 
 
-
+void UartRxBuffer::flipBuffer()
+{
+	if (curWriteBuf == &lBuf[0])
+		curWriteBuf = &lBuf[1];
+	else
+		curWriteBuf = &lBuf[0];
+}

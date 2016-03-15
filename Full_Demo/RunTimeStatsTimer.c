@@ -68,6 +68,7 @@
 */
 
 /* FreeRTOS includes. */
+#include <reent.h>
 #include "FreeRTOS.h"
 
 /* Utility functions to implement run time stats on Cortex-M CPUs.  The collected

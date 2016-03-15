@@ -45,3 +45,13 @@ int _read(int file, char *ptr, int len)
 {
 	return -1;
 }
+
+int _getpid(void)
+{
+	return -1;
+}
+
+int _kill(int pid, int sig)
+{
+	return -1;
+}

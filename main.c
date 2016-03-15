@@ -238,6 +238,7 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
     *pusIdleTaskStackSize = 200;
 }
 
+#if 0
 void *malloc( size_t xSize )
 {
 	/* There should not be a heap defined, so trap any attempts to call
@@ -245,5 +246,6 @@ void *malloc( size_t xSize )
 	Interrupt_disableMaster();
 	for( ;; );
 }
+#endif
 /*-----------------------------------------------------------*/
 

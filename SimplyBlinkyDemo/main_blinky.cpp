@@ -115,11 +115,15 @@
 
 /* Standard includes. */
 #include <stdio.h>
+#include <cstdint>
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "queue.h"
+#include "TransportMessages.h"
+#include "BufReadIf.h"
 
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
@@ -132,12 +136,13 @@ to ticks using the portTICK_PERIOD_MS constant. */
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
 the queue empty. */
-#define mainQUEUE_LENGTH					( 1 )
+#define mainQUEUE_LENGTH					( 3 )
 
 /* Values passed to the two tasks just to check the task parameter
 functionality. */
 #define mainQUEUE_SEND_PARAMETER			( 0x1111UL )
 #define mainQUEUE_RECEIVE_PARAMETER			( 0x22UL )
+
 
 /*-----------------------------------------------------------*/
 
@@ -146,6 +151,12 @@ functionality. */
  */
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
+
+
+
+extern "C" {
+void main_blinky( void );
+};
 
 /*
  * Called by main() to create the simply blinky style application if
@@ -164,6 +175,21 @@ static void prvConfigureClocks( void );
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
 
+namespace TransportLayer {
+void sendMsg(MsgBaseType& msg)
+{
+	xQueueSend(xQueue, static_cast<void*>(&msg), portMAX_DELAY );
+}
+
+bool sendMsgFromIrq(MsgBaseType& msg)
+{
+	return xQueueSendFromISR(xQueue, static_cast<void*>(&msg), NULL) == pdTRUE;
+}
+
+};
+
+
+
 /*-----------------------------------------------------------*/
 
 extern void initUART(void);
@@ -172,7 +198,7 @@ StaticTask_t xTxTaskBuffer;
 StaticTask_t xRxTaskBuffer;
 
 StaticQueue_t xRxQueueDef;
-uint8_t xRxQueueBuf[mainQUEUE_LENGTH * sizeof(uint32_t)];
+uint8_t xRxQueueBuf[mainQUEUE_LENGTH * sizeof(TransportMessages)];
 
  // Buffer that the task being created will use as its stack.
  StackType_t xRxStack[configMINIMAL_STACK_SIZE];
@@ -192,7 +218,7 @@ void main_blinky( void )
 	CS_setDCOCenteredFrequency(CS_DCO_FREQUENCY_12);
 
 	/* Create the queue. */
-	xQueue = xQueueCreateStatic( mainQUEUE_LENGTH, sizeof( uint32_t ), xRxQueueBuf, &xRxQueueDef);
+	xQueue = xQueueCreateStatic( mainQUEUE_LENGTH, sizeof(TransportMessages), xRxQueueBuf, &xRxQueueDef);
 
 	if( xQueue != NULL )
 	{
@@ -225,9 +251,8 @@ void main_blinky( void )
 
 static void prvQueueSendTask( void *pvParameters )
 {
-TickType_t xNextWakeTime;
-const unsigned long ulValueToSend = 100UL;
-int i = 0;
+	TickType_t xNextWakeTime;
+	struct MsgBaseType msg{static_cast<uint8_t>(TransportCodes::BLINK)};
 
 	/* Check the task parameter is as expected. */
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_SEND_PARAMETER );
@@ -248,17 +273,18 @@ int i = 0;
 		toggle the LED.  0 is used as the block time so the sending operation
 		will not block - it shouldn't need to block as the queue should always
 		be empty at this point in the code. */
-		xQueueSend( xQueue, &ulValueToSend, 0U );
+		TransportLayer::sendMsg(msg);
 	}
 }
 /*-----------------------------------------------------------*/
 
 void TestRingBuffer();
 
+int noOfRxMsgs;
+
 static void prvQueueReceiveTask( void *pvParameters )
 {
-unsigned long ulReceivedValue;
-static const TickType_t xShortBlock = pdMS_TO_TICKS( 50 );
+	static const TickType_t xShortBlock = pdMS_TO_TICKS( 50 );
 
 	/* Check the task parameter is as expected. */
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_RECEIVE_PARAMETER );
@@ -267,21 +293,34 @@ static const TickType_t xShortBlock = pdMS_TO_TICKS( 50 );
 
 	for( ;; )
 	{
+		uint8_t msg[sizeof(TransportMessages)];
+		MsgBaseType& code = reinterpret_cast<MsgBaseType&>(msg);
+
 		/* Wait until something arrives in the queue - this task will block
 		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
 		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY );
+		xQueueReceive( xQueue, &msg, portMAX_DELAY );
 
 		/*  To get here something must have been received from the queue, but
 		is it the expected value?  If it is, toggle the LED. */
-		if( ulReceivedValue == 100UL )
-		{
+		switch (static_cast<TransportCodes>(code.msgCode)) {
+		case TransportCodes::BLINK:
 			/* Blip the LED for a short while so as not to use too much
 			power. */
 			configTOGGLE_LED();
 			vTaskDelay( xShortBlock );
 			configTOGGLE_LED();
-			ulReceivedValue = 0U;
+			break;
+		case TransportCodes::RXMSG:
+		{
+			RxMsgBase& rxmsg = static_cast<RxMsgBase&>(code);
+
+			while (rxmsg.buf->get() != -1);
+			noOfRxMsgs++;
+			break;
+		}
+		default:
+			break;
 		}
 	}
 }
@@ -313,6 +352,10 @@ void vPreSleepProcessing( uint32_t ulExpectedIdleTime )
 /*-----------------------------------------------------------*/
 
 #if( configCREATE_SIMPLE_TICKLESS_DEMO == 1 )
+
+extern "C" {
+void vApplicationTickHook( void );
+};
 
 	void vApplicationTickHook( void )
 	{

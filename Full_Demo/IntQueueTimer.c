@@ -76,6 +76,7 @@
  */
 
 /* Scheduler includes. */
+#include <reent.h>
 #include "FreeRTOS.h"
 
 /* Demo includes. */
