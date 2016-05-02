@@ -59,26 +59,32 @@
  *
  *
  * The serial protocol is:
- * <STX><SIZE><SEQ_ID><TYPE><CRC_TYPE><CRC><DATA><ETX>
+ * <STX><SIZE><DATA><CRC><ETX>
  * Any X in [<STX>, <ESC>, <ETX>] between <STX>/<ETX> is escaped by <ESC><X>
  * Size is one byte.
- * SEQ_ID is a message identifier. ACK/NAK messages echo this.
- * TYPE is ACK, NAK or MSG
- * CRC_TYPE is NONE, CRC-16
  * DATA is the payload.
  *
  * When an entire STX/ETX stream has been received, it is briefly analyzed.
  * If the CRC does not match:
  *   If ACK/NAK: just discard
- *   If MSG: send NAK
- * If upper layers have no room for message: Send NAK
- * Otherwise, send ACK.
+ *   If MSG: send NAK (do this by notifying next layer that a NAK should be sent).
+ *   Otherwise, send ACK.
  * CRC-16 is MSB first. x^15 + x^12 + x^5 + 1
  * CRC NONE means there will be no CRC field at all.
-*******************************************************************************/
+ *
+ * Next layer (<DATA> field):
+ * <SIZE>: one byte. size field itself is included in count.
+ * <HEADER>:
+ *  b0..b2: transaction ID (same for request and response)
+ *  b3: direction (unused?)
+ *  b4..b6: type: REQUEST(0), RESPONSE(1), ACKNOWLEDGED(2), UNACKNOWLEDGED(3), ACK(4), NAK(5)
+ * <DATA>
+ *
+ *******************************************************************************/
 /* DriverLib Includes */
 #include "driverlib.h"
 #include "UartRxBuffer.h"
+#include "UartTxBuffer.h"
 #include "FreeRTOSConfig.h"
 
 /* Standard Includes */
@@ -126,51 +132,62 @@ void initUART()
     MAP_UART_enableModule(EUSCI_A2_BASE);
 
     /* Enabling interrupts */
-    MAP_UART_enableInterrupt(EUSCI_A2_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT | EUSCI_A_UART_TRANSMIT_INTERRUPT);
+#if 0
+    MAP_UART_enableInterrupt(EUSCI_A2_BASE,
+    						 EUSCI_A_UART_RECEIVE_INTERRUPT |
+							 EUSCI_A_UART_TRANSMIT_INTERRUPT |
+							 EUSCI_A_UART_TRANSMIT_COMPLETE_INTERRUPT);
+#else
+    MAP_UART_enableInterrupt(EUSCI_A2_BASE,
+    						 EUSCI_A_UART_RECEIVE_INTERRUPT |
+							 EUSCI_A_UART_TRANSMIT_INTERRUPT);
+#endif
     MAP_UART_clearInterruptFlag(EUSCI_A2_BASE, MAP_UART_getEnabledInterruptStatus(EUSCI_A2_BASE));
     MAP_Interrupt_setPriority(INT_EUSCIA2,  configMAX_SYSCALL_INTERRUPT_PRIORITY);
     MAP_Interrupt_enableInterrupt(INT_EUSCIA2);
 }
 
 
-#define UART_BUF_SIZE 34
 
 
-uint8_t inbuf[UART_BUF_SIZE];
-uint8_t in_wr_ix;
-uint8_t outbuf[UART_BUF_SIZE];
-uint8_t out_rd_ix;
-
-
-void handleRxMsg()
-{
-	out_rd_ix = 0;
-	in_wr_ix = 0;
-	memcpy(outbuf, inbuf, sizeof outbuf);
-	MAP_UART_transmitData(EUSCI_A2_BASE, outbuf[out_rd_ix++]);
-}
-
-void putRxData(uint8_t c)
-{
-	if (in_wr_ix < UART_BUF_SIZE)
-		inbuf[in_wr_ix++] = c;
-	if (c == '\r')
-		handleRxMsg();
-}
-
-int getRxData(uint8_t * const c)
-{
-	if (outbuf[out_rd_ix-1] == '\r')
-		return 0;
-	*c = outbuf[out_rd_ix++];
-	return 1;
-}
 
 extern "C" {
 void euscia2_isr(void);
 };
 
 UartRxBuffer rxBuf;
+UartTxBuffer txBuf;
+
+namespace L2_IF {
+void postMessage(TransactionBuffer& outMsg)
+{
+	txBuf.postMsg(outMsg);
+}
+};
+//#define TEST_TX
+
+#ifdef TEST_TX
+static unsigned char mybuf[] = "hello\n";
+int wr_ix = 0;
+#endif
+
+/* Put the 1st character in the tx buffer to initiate transmissions.
+ * The following chars will be pulled by the interrupt handler.
+ */
+void startTx(int c)
+{
+#ifdef TEST_TX
+	MAP_UART_transmitData(EUSCI_A2_BASE, mybuf[wr_ix++]);
+#else
+	MAP_UART_transmitData(EUSCI_A2_BASE, c);
+#endif
+}
+
+#ifdef TEST_TX
+static int no_of_tx_complete;
+#endif
+
+bool sendingETX = false;
 
 /* EUSCI A2 UART ISR - Echoes data back to PC host */
 void euscia2_isr(void)
@@ -182,16 +199,43 @@ void euscia2_isr(void)
     if(status & EUSCI_A_UART_RECEIVE_INTERRUPT)
     {
     	const uint8_t c = MAP_UART_receiveData(EUSCI_A2_BASE);
-
+#ifdef TEST_TX2
+    	if (wr_ix == 0)
+    		startTx('H');
+#else
     	rxBuf.put(c);
+#endif
     }
     else if (status & EUSCI_A_UART_TRANSMIT_INTERRUPT) {
-    	uint8_t c;
-    	const int more = getRxData(&c);
-
-    	if (more) {
-    		MAP_UART_transmitData(EUSCI_A2_BASE, c);
+#ifdef TEST_TX
+    	if ((wr_ix+1) < sizeof mybuf)
+    		MAP_UART_transmitData(EUSCI_A2_BASE, mybuf[wr_ix++]);
+    	else
+    		wr_ix = 0;
+#else
+    	if (sendingETX) {
+    		sendingETX = false;
+    		txBuf.transmissionIsComplete();
     	}
+    	else {
+    		const int c = txBuf.get();
+
+    		if (c >= 0)
+    			MAP_UART_transmitData(EUSCI_A2_BASE, c);
+    		else {
+    			sendingETX = true;
+    			MAP_UART_transmitData(EUSCI_A2_BASE, UartTxBuffer::ETX);
+    		}
+    	}
+#endif
+    }
+    else if (status & EUSCI_A_UART_TRANSMIT_COMPLETE_INTERRUPT) {
+#ifdef TEST_TX
+    	no_of_tx_complete++;
+#else
+    	txBuf.transmissionIsComplete();
+    		// Yes, now we are done.
+#endif
     }
 }
 

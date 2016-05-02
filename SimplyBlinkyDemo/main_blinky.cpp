@@ -123,7 +123,8 @@
 #include "semphr.h"
 #include "queue.h"
 #include "TransportMessages.h"
-#include "BufReadIf.h"
+#include "L2_Interface.h"
+#include "TransactionBuffers.h"
 
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
@@ -280,6 +281,22 @@ static void prvQueueSendTask( void *pvParameters )
 
 void TestRingBuffer();
 
+TransactionBuffers tLayer;
+
+
+#if 0
+/* Decide whether a NAK or ACK should be sent back, and queue the reply. */
+bool sendL2Reply(LinearBuffer& inMsg)
+{
+	LinearBuffer *reply = tBufs.claimBuffer();
+
+	if (reply == nullptr)
+		return false;
+	L2_IF::sendL2Reply(*reply, inMsg);
+	return true;
+}
+#endif
+
 int noOfRxMsgs;
 
 static void prvQueueReceiveTask( void *pvParameters )
@@ -315,8 +332,14 @@ static void prvQueueReceiveTask( void *pvParameters )
 		{
 			RxMsgBase& rxmsg = static_cast<RxMsgBase&>(code);
 
-			while (rxmsg.buf->get() != -1);
-			noOfRxMsgs++;
+			tLayer.handleMsg(rxmsg);
+			break;
+		}
+		case TransportCodes::TXMSG:
+		{
+			TxMsgBase& txmsg = static_cast<TxMsgBase&>(code);
+
+			tLayer.msgWasSent(txmsg);
 			break;
 		}
 		default:
@@ -371,3 +394,12 @@ void vApplicationTickHook( void );
 
 #endif
 
+void syserr()
+{
+	while (1);
+}
+
+extern "C" void __cxa_pure_virtual()
+{
+	syserr();
+}

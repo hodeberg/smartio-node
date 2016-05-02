@@ -8,12 +8,31 @@
 #include "UartRxBuffer.h"
 #include "TransportMessages.h"
 
-#if 1
+namespace L2_IF {
+bool verifyIntegrity(LinearBuffer &receivedMsg)
+{
+	// For now, message is always OK
+	return true;
+}
+bool sendL2Reply(LinearBuffer& replyMsg, LinearBuffer& inMsg)
+{
+	replyMsg.put(UartRxBuffer::STX);
+	// TBD
+	return true;
+}
+
+}
+
 UartRxBuffer::UartRxBuffer() : lBuf{{buf1, bufsize}, {buf2, bufsize}}, state(RxState::IDLE), curWriteBuf(&lBuf[0]),
                                receivedBuffers(0), droppedBuffers(0) {}
-#else
-UartRxBuffer::UartRxBuffer() : lBuf1{buf1, bufsize}, lBuf2{buf2, bufsize}, state(RxState::IDLE), curWriteBuf(&lBuf1) {}
-#endif
+
+
+bool UartRxBuffer::l2ChecksOk()
+{
+	// TBD: check CRC
+	return true;
+}
+
 
 void UartRxBuffer::put(unsigned int c)
 {
@@ -30,16 +49,23 @@ void UartRxBuffer::put(unsigned int c)
 		if (c == ESC)
 			state = RxState::ESCAPING;
 		else if (c == ETX) {
-			RxMsgBase msg{static_cast<LinearBuffer*>(curWriteBuf)};
+			RxMsgBase msg{curWriteBuf};
+
 			state = RxState::DONE;
-			if (TransportLayer::sendMsgFromIrq(msg)) {
-				flipBuffer();
-				receivedBuffers++;
+			// If CRC is bad, we cannot trust anything in the packet and thus just discard it.
+			if (l2ChecksOk()) {
+				// Remove CRC
+				curWriteBuf->unget();
+				curWriteBuf->unget();
+				if (TransportLayer::sendMsgFromIrq(msg)) {
+					flipBuffer();
+					receivedBuffers++;
+					break;
+				}
 			}
-			else {
-				droppedBuffers++;
-				curWriteBuf->reset();
-			}
+			droppedBuffers++;
+			curWriteBuf->reset();
+			state = RxState::HUNTING;
 		}
 		else {
 			if (!curWriteBuf->put(c)) {
@@ -52,6 +78,7 @@ void UartRxBuffer::put(unsigned int c)
 		break;
 	case RxState::ESCAPING:
 		{
+			c -= 0x80;
 			if ((c == ESC) || (c == STX)  || (c == ETX)) {
 				state = RxState::RCV;
 				if (!curWriteBuf->put(c)) {
