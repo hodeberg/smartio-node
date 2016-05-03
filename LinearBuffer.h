@@ -24,7 +24,7 @@ public:
 	int get(); // Returns -1 if empty
 	int getWord16();
 	void getAttr(Attribute &attr); // Read attribute value from buffer
-	bool isEmpty() const { return wrIx == rdIx; }
+	bool isEmpty() const { return (wrIx == 0) && (rdIx == 0); }
 	bool isFull() const;
 	unsigned int bytes_stored() const; // Number of chars available for reading
 	unsigned int bytes_free() const; // Number of bytes left in buffer

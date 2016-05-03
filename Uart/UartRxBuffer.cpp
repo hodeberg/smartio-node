@@ -105,4 +105,5 @@ void UartRxBuffer::flipBuffer()
 		curWriteBuf = &lBuf[1];
 	else
 		curWriteBuf = &lBuf[0];
+	curWriteBuf->reset();
 }

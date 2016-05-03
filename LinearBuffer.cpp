@@ -11,11 +11,6 @@
 
 LinearBuffer::LinearBuffer(uint8_t *buf, unsigned int size) : mBuf(buf), mSize(size), wrIx(0), rdIx(0)
 {
-	int x = 3, y=5;
-	int z;
-
-	z = x + y;
-	x = 7 - z;
 }
 
 bool LinearBuffer::put(unsigned int c)
@@ -29,7 +24,7 @@ int LinearBuffer::get()
 {
 	int c = -1;
 
-	if (!isEmpty())
+	if (rdIx < wrIx)
 		c = mBuf[rdIx++];
 	return c;
 }
