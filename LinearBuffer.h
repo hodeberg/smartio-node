@@ -29,7 +29,9 @@ public:
 	unsigned int bytes_stored() const; // Number of chars available for reading
 	unsigned int bytes_free() const; // Number of bytes left in buffer
 	void reset() { wrIx = rdIx = 0; }
+	void resetRd() { rdIx = 0; }
 	void setSize();
+	void setSizeUnescaped();
 	unsigned char& operator[](unsigned int ix); // Potentially modifies class
 	unsigned int operator[](unsigned int ix) const; // Never modifies class
 	void unget(); // remove last byte

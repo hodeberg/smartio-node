@@ -194,6 +194,8 @@ bool sendMsgFromIrq(MsgBaseType& msg)
 /*-----------------------------------------------------------*/
 
 extern void initUART(void);
+extern void initI2CModule(void);
+
 
 StaticTask_t xTxTaskBuffer;
 StaticTask_t xRxTaskBuffer;
@@ -307,6 +309,7 @@ static void prvQueueReceiveTask( void *pvParameters )
 	configASSERT( ( ( unsigned long ) pvParameters ) == mainQUEUE_RECEIVE_PARAMETER );
 
 	initUART();
+	initI2CModule();
 
 	for( ;; )
 	{

@@ -24,9 +24,11 @@ enum class TransportCodes {
 class MsgHeader {
 public:
 	MsgHeader(unsigned int header);
-	enum class MsgType {REQUEST, RESPONSE, ACKNOWLEDGED, UNACKNOWLEDGED, ACK, NAK };
+	enum class MsgType {REQUEST, RESPONSE, ACKNOWLEDGED, UNACKNOWLEDGED, ACK, NAK, EMPTY_MSG };
+	MsgHeader(MsgType t, unsigned int id): type(t), transId(id), direction(0) {}
 	MsgType getType() const;
 	unsigned int getID() const;
+	unsigned int mkHeader() const;
 private:
 	MsgType type;
 	unsigned int transId;
@@ -39,10 +41,23 @@ public:
 	uint8_t msgCode;
 };
 
+class MsgCompletion {
+public:
+	virtual void messageHandled(LinearBuffer& buf) = 0;
+};
+
+class NullCompletion : public MsgCompletion {
+public:
+	virtual void messageHandled(LinearBuffer& buf) {}
+};
+
+
 struct RxMsgBase : public MsgBaseType {
 public:
-	RxMsgBase(LinearBuffer* b) : MsgBaseType(static_cast<uint8_t>(TransportCodes::RXMSG)), buf(b) {}
+	RxMsgBase(LinearBuffer* b);
+	RxMsgBase(LinearBuffer* b, MsgCompletion &c);
 	LinearBuffer* buf;
+	MsgCompletion &completion;
 };
 
 struct TxMsgBase : public MsgBaseType {
@@ -56,6 +71,7 @@ public:
 typedef union {
 	MsgBaseType base;
 	RxMsgBase rxMsg;
+	TxMsgBase txMsg;
 } TransportMessages;
 #endif /* TRANSPORTMESSAGES_H_ */
 

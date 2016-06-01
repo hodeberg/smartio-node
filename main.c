@@ -154,6 +154,21 @@ extern void FPU_enableModule( void );
 	MAP_GPIO_setAsPeripheralModuleFunctionInputPin( GPIO_PORT_P1, GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION );
 	MAP_GPIO_setOutputLowOnPin( GPIO_PORT_P1, GPIO_PIN0 );
 	MAP_GPIO_setAsOutputPin( GPIO_PORT_P1, GPIO_PIN0 );
+
+	/* Enable S2 and LED2 */
+	MAP_GPIO_setOutputLowOnPin( GPIO_PORT_P2, GPIO_PIN0 );
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
+	MAP_GPIO_setOutputLowOnPin( GPIO_PORT_P2, GPIO_PIN1 );
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN1);
+	MAP_GPIO_setOutputLowOnPin( GPIO_PORT_P2, GPIO_PIN2 );
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN2);
+
+	MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN4);
+	MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P1, GPIO_PIN4, GPIO_HIGH_TO_LOW_TRANSITION);
+	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN4);
+	MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN4);
+	MAP_Interrupt_enableInterrupt(INT_PORT1);
+
 }
 /*-----------------------------------------------------------*/
 

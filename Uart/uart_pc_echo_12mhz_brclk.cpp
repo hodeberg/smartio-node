@@ -158,12 +158,6 @@ void euscia2_isr(void);
 UartRxBuffer rxBuf;
 UartTxBuffer txBuf;
 
-namespace L2_IF {
-void postMessage(TransactionBuffer& outMsg)
-{
-	txBuf.postMsg(outMsg);
-}
-};
 //#define TEST_TX
 
 #ifdef TEST_TX

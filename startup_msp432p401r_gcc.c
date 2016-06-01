@@ -70,6 +70,8 @@ extern void vUART_Handler( void );
 extern void vT32_0_Handler( void );
 extern void vT32_1_Handler( void );
 extern void euscia2_isr(void);
+extern void euscib1_isr(void);
+extern void PORT1_IRQHandler (void);
 
 extern unsigned long __stack_end__;
 
@@ -119,9 +121,9 @@ void (* const interruptVectors[])(void) __attribute__ ((section (".intvecs"))) =
     defaultISR,                             /* EUSCIA1 ISR               */
 	euscia2_isr,                             /* EUSCIA2 ISR               */
     defaultISR,                             /* EUSCIA3 ISR               */
-    defaultISR,                             /* EUSCIB0 ISR               */
-    defaultISR,                             /* EUSCIB1 ISR               */
-    defaultISR,                             /* EUSCIB2 ISR               */
+	euscib1_isr,                             /* EUSCIB0 ISR               */
+	euscib1_isr,                             /* EUSCIB1 ISR               */
+	euscib1_isr,                             /* EUSCIB2 ISR               */
     defaultISR,                             /* EUSCIB3 ISR               */
     defaultISR,                             /* ADC14 ISR                 */
 	vT32_0_Handler,                             /* T32_INT1 ISR              */
@@ -134,7 +136,7 @@ void (* const interruptVectors[])(void) __attribute__ ((section (".intvecs"))) =
     defaultISR,                             /* DMA_INT2 ISR              */
     defaultISR,                             /* DMA_INT1 ISR              */
     defaultISR,                             /* DMA_INT0 ISR              */
-    defaultISR,                             /* PORT1 ISR                 */
+	PORT1_IRQHandler,                             /* PORT1 ISR                 */
     defaultISR,                             /* PORT2 ISR                 */
     defaultISR,                             /* PORT3 ISR                 */
     defaultISR,                             /* PORT4 ISR                 */

@@ -72,6 +72,9 @@ void LinearBuffer::putAttr(const Attribute &attr)
 	wrIx += len;
 }
 
+/*
+ * TODO: this does not belong here. STX/ETX/ESC escaping is a purely UART affair.
+ */
 void LinearBuffer::setSize()
 {
 	int sz = wrIx - rdIx;
@@ -81,6 +84,14 @@ void LinearBuffer::setSize()
 			sz++;
 	mBuf[0] = sz;
 }
+
+void LinearBuffer::setSizeUnescaped()
+{
+	int sz = wrIx - rdIx;
+
+	mBuf[0] = sz;
+}
+
 
 void LinearBuffer::unget() // remove last byte
 {
